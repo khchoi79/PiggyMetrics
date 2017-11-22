@@ -1,0 +1,66 @@
+version: '3'
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+
+  config:
+    environment:
+      CONFIG_SERVICE_PASSWORD: $CONFIG_SERVICE_PASSWORD
+    image: sqshq/piggymetrics-config
+    deploy:
+      restart_policy:
+        condition: on-failure
+
+  registry:
+    environment:
+      CONFIG_SERVICE_PASSWORD: $CONFIG_SERVICE_PASSWORD
+    image: sqshq/piggymetrics-registry
+    depends_on:
+      - config
+    ports:
+      - 8761:8761
+
+  gateway:
+    environment:
+      CONFIG_SERVICE_PASSWORD: $CONFIG_SERVICE_PASSWORD
+    image: sqshq/piggymetrics-gateway
+    depends_on:
+      - config
+    ports:
+      - 8080:4000
+
+  auth-service:
+    environment:
+      CONFIG_SERVICE_PASSWORD: $CONFIG_SERVICE_PASSWORD
+      NOTIFICATION_SERVICE_PASSWORD: $NOTIFICATION_SERVICE_PASSWORD
+      STATISTICS_SERVICE_PASSWORD: $STATISTICS_SERVICE_PASSWORD
+      ACCOUNT_SERVICE_PASSWORD: $ACCOUNT_SERVICE_PASSWORD
+      MONGODB_PASSWORD: $MONGODB_PASSWORD
+    image: sqshq/piggymetrics-auth-service
+    depends_on:
+      - config
+
+  auth-mongodb:
+    environment:
+      MONGODB_PASSWORD: $MONGODB_PASSWORD
+    image: sqshq/piggymetrics-mongodb
+    volumes:
+      - auth:/data
+
+  account-service:
+    environment:
+      CONFIG_SERVICE_PASSWORD: $CONFIG_SERVICE_PASSWORD
+      ACCOUNT_SERVICE_PASSWORD: $ACCOUNT_SERVICE_PASSWORD
+      MONGODB_PASSWORD: $MONGODB_PASSWORD
+    image: sqshq/piggymetrics-account-service
+    depends_on:
+      - config
+
+  account-mongodb:
+    environment:
+      INIT_DUMP: account-service-dump.js
+      MONGODB_PASSWORD: $MONGODB_PASSWORD
+    image: sqshq/piggymetrics-mongodb
+
+volumes:
+  auth:

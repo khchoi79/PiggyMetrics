@@ -1,0 +1,80 @@
+version: '3.2'
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+
+  config:
+    environment:
+      CONFIG_SERVICE_PASSWORD: t
+    image: config:1
+    volumes:
+      - type: bind
+        source: /home/core/PiggyMetrics/config/target
+        target: /app
+        bind:
+          propagation: shared
+      - type: volume
+        source: mydata
+        target: /app2
+    deploy:
+      restart_policy:
+        condition: on-failure
+        #delay: 5s
+        #max_attempts: 3
+        #window: 120s
+      placement:
+        constraints:
+          - node.role == manager
+          #- engine.labels.operatingsystem == ubuntu 14.04
+      #endpoint_mode: vip dnsrr <- 3.3 only
+      #labels:
+      #  com.example.description: "This label will appear on the web service"
+      #replicas: 2
+      #mode: global
+      #resources:
+      #  limits:
+      #    cpus: '0.50'
+      #    memory: 50M
+      #  reservations:
+      #    cpus: '0.25'
+      #    memory: 20M
+      #update_config:
+      #  parallelism: 2
+      #  delay: 10s
+      #  order: stop-first
+
+  registry:
+    environment:
+      CONFIG_SERVICE_PASSWORD: t
+    image: sqshq/piggymetrics-registry
+    depends_on:
+      - config
+    ports:
+      - 8761:8761
+
+  gateway:
+    environment:
+      CONFIG_SERVICE_PASSWORD: t
+    image: sqshq/piggymetrics-gateway
+    depends_on:
+      - config
+    ports:
+      - 8080:4000
+
+  account-service:
+    environment:
+      CONFIG_SERVICE_PASSWORD: t
+      ACCOUNT_SERVICE_PASSWORD: t
+      MONGODB_PASSWORD: t
+    image: sqshq/piggymetrics-account-service
+    depends_on:
+      - config
+
+  account-mongodb:
+    environment:
+      INIT_DUMP: account-service-dump.js
+      MONGODB_PASSWORD: t
+    image: sqshq/piggymetrics-mongodb
+
+volumes:
+  mydata:
