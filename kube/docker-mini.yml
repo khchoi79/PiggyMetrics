@@ -1,0 +1,75 @@
+version: '3'
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - 5672:5672
+      - 15672:15672
+
+  config:
+    environment:
+      CONFIG_SERVICE_PASSWORD: t
+    image: sqshq/piggymetrics-config
+    ports:
+      - 8888:8888
+
+  registry:
+    environment:
+      CONFIG_SERVICE_PASSWORD: t
+    image: sqshq/piggymetrics-registry
+    depends_on:
+      - config
+    labels:
+      kompose.service.type: nodeport
+    ports:
+      - 8761:8761
+
+  gateway:
+    environment:
+      CONFIG_SERVICE_PASSWORD: t
+    image: sqshq/piggymetrics-gateway
+    depends_on:
+      - config
+    labels:
+      kompose.service.type: nodeport
+    ports:
+      - 4000:4000
+
+  account-service:
+    environment:
+      CONFIG_SERVICE_PASSWORD: t
+      ACCOUNT_SERVICE_PASSWORD: t
+      MONGODB_PASSWORD: t
+    image: sqshq/piggymetrics-account-service
+    depends_on:
+      - config
+    ports:
+      - 6000:6000
+
+  account-mongodb:
+    environment:
+      INIT_DUMP: account-service-dump.js
+      MONGODB_PASSWORD: t
+    image: sqshq/piggymetrics-mongodb
+    ports:
+      - 27017:27017
+
+  auth-service:
+    environment:
+      CONFIG_SERVICE_PASSWORD: t
+      NOTIFICATION_SERVICE_PASSWORD: t
+      STATISTICS_SERVICE_PASSWORD: t
+      ACCOUNT_SERVICE_PASSWORD: t
+      MONGODB_PASSWORD: t
+    image: sqshq/piggymetrics-auth-service
+    depends_on:
+      - config
+    ports:
+      - 5000:5000
+
+  auth-mongodb:
+    environment:
+      MONGODB_PASSWORD: t
+    image: sqshq/piggymetrics-mongodb
+    ports:
+      - 27017:27017
